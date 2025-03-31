@@ -21,19 +21,20 @@ Features
     Chat Logging: Server logs all messages to a file (chat_log.txt).
 
     Connection Status: A status bar provides feedback on connection status.
+    
 
-    Requirements
+Requirements
 
-        Python 3.x (3.6 or higher recommended)
-        Required libraries (all included in Python's standard library):
-        socket
-        threading
-        tkinter
-        json
-        os
-        sys
-        datetime
-        time
+    Python 3.x (3.6 or higher recommended)
+    Required libraries (all included in Python's standard library):
+    socket
+    threading
+    tkinter
+    json
+    os
+    sys
+    datetime
+    time
 
 No additional installations are required as all dependencies are part of Python's standard library.
 Chat Features
