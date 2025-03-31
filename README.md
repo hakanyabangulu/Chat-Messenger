@@ -7,6 +7,7 @@ Chat Messenger Application
 	The server and client functionalities are combined into a single script, making it easy to test and deploy.
 
 Features
+
     General Chat: A public chat room where all connected users can communicate.
 
     Private Chat: Users can initiate private conversations with others by double-clicking their names in the user list.
@@ -36,6 +37,7 @@ Features
 
 No additional installations are required as all dependencies are part of Python's standard library.
 Chat Features
+
     General Chat: Type a message in the input field at the bottom and click "Send" (or press Enter). 
 	The message will appear in the general chat window for all users.
 
