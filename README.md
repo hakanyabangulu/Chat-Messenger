@@ -61,3 +61,8 @@ Notes
     
     Error Handling: The application includes basic error handling for disconnections and invalid nicknames. 
 	Check the terminal for detailed error messages if issues arise.    
+
+ When it works :
+ 
+ ![Ekran görüntüsü 2025-04-01 144625](https://github.com/user-attachments/assets/214816b0-b049-4624-a657-05e2f78fb474)
+
