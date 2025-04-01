@@ -59,10 +59,13 @@ Notes
     Rate Limiting: The server limits users to 5 messages within 5 seconds. 
 	Exceeding this limit results in a 10-second mute.
     
+
     Error Handling: The application includes basic error handling for disconnections and invalid nicknames. 
 	Check the terminal for detailed error messages if issues arise.    
 
  When it works :
  
- ![Ekran görüntüsü 2025-04-01 144625](https://github.com/user-attachments/assets/214816b0-b049-4624-a657-05e2f78fb474)
+ ![Ekran görüntüsü 2025-04-01 145039](https://github.com/user-attachments/assets/6999b632-172d-46c0-aadc-32fefc3086de)
+ 
+
 
