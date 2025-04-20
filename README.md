@@ -36,13 +36,12 @@ Requirements
 Setup and Running
 Download the Files:
 
-	chat_server.py: The server script.
-	chat_client.py: The client script.
+	Server.py: The server script.
+	Client.py: The client script.
+ 	ChatMessenger.py: Combined script
 Run the Server:
 
-	Open a terminal and navigate to the directory containing chat_server.py.
-
-
+	Open a terminal and navigate to the directory containing Server.py.
 
 Notes
 
