@@ -61,4 +61,4 @@ Notes
 
  When it works :
 
-    ![Ekran görüntüsü 2025-04-20 133450](https://github.com/user-attachments/assets/2af710de-2513-4aba-9e80-01bfed6d772d)
+ ![Ekran görüntüsü 2025-04-20 133450](https://github.com/user-attachments/assets/2af710de-2513-4aba-9e80-01bfed6d772d)
