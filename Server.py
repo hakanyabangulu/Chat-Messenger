@@ -4,134 +4,137 @@ import json
 from datetime import datetime
 import time
 
-# Sunucu temel ayarları
-HOST = '127.0.0.1'
-PORT = 5555
-LOG_FILE = "chat_log.txt"
+Host = '127.0.0.1'  # Local Host.
+Port = 5555  # Empty port I picked.
+General = "chat.txt"  # Where the general message gets saved.
+Private = "private.txt"  # Where the private message gets saved.
+Exit = "Exit"
 
-# Sunucu için global değişkenler
-clients = {}  # Bağlı istemciler: {socket: takma_ad}
-persistent_users = set()  # Kalıcı kullanıcı listesi
-message_times = {}  # Mesaj zaman damgaları: {socket: [zamanlar]}
+Clients = {}  # Who's connected.
+Active_Users = set()  # Who's chatting.
+Timestamps = {}  # For Spams.
+lock = threading.Lock()  # Thread safety lock.
 
-def start_server():
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+def Remove(client):  # Removes a client from all data structures.
+    with lock: 
+        nickname = Clients.get(client, "Unknown")  # Get nickname or mark as unknown.
+        Clients.pop(client, None)  # Remove from Clients.
+        Timestamps.pop(client, None)  # Remove from Timestamps.
+        Active_Users.discard(nickname)  # Remove from active users.
+        print(f"Disconnected removed: {nickname}")
+        return nickname
+
+def Server():  # Try to Start TCP server.
     try:
-        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        server.bind((HOST, PORT))
-        server.listen()
-        print(f"Sunucu {HOST}:{PORT} adresinde çalışıyor")
+        Server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  # New Socket.
+        Server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)  # Allows the socket to reuse. 
+        Server.bind((Host, Port))  # Binds Host and Ports.
+        Server.listen()  # Socket is listening.
+        print(f"Server is running at {Host}:{Port}")
     except Exception as e:
-        print(f"Sunucu {HOST}:{PORT} adresinde başlatılamadı. Hata: {str(e)}")
+        print(f"Server is not starting at {Host}:{Port}. Error: {str(e)}! ")
         return
-
-    # Tüm istemcilere mesaj yayınlama fonksiyonu
-    def broadcast(message):
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        full_message = f"[{timestamp}] {message}"
-        disconnected_clients = []
-        for client in clients:
+    
+    def Broadcast(message):  # Sends the message to all clients.
+        Dis_Clients = []  # List for disconnected clients.
+        time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        fmessage = f"{time} {message}"  # Message and time.
+        for client in Clients:
             try:
-                client.send(full_message.encode('utf-8'))
+                client.send(fmessage.encode("utf-8"))
             except:
-                disconnected_clients.append(client)
-        for client in disconnected_clients:
-            nickname = clients.get(client, "Bilinmeyen")
-            clients.pop(client, None)
-            message_times.pop(client, None)
-            persistent_users.discard(nickname)
-            print(f"Bağlantısı kopan istemci kaldırıldı: {nickname}")
-        with open(LOG_FILE, "a", encoding='utf-8') as log_file:
-            log_file.write(f"{full_message}\n")
+                Dis_Clients.append(client)  # Add disconnected to list.   
+        for client in Dis_Clients:
+            Remove(client)  # Use new function to remove client
+        with open(General, "a", encoding='utf-8') as log:  # Writes this message to log file.
+            log.write(f"{fmessage}\n")
 
-    # Bağlı kullanıcı listesini istemcilere gönderir
-    def send_user_list():
-        user_list = json.dumps(list(clients.values()))
-        print(f"Kullanıcı listesi gönderiliyor: {user_list}")
-        disconnected_clients = []
-        for client in clients:
+    def UserList():  # Sends the updated user list to all clients
+        User_List = json.dumps(list(Clients.values()))  # The nicknames converted into JSON format.
+        print(f"User list is sending: {User_List}")
+        Dis_Clients = []  # List for disconnected clients.
+        for client in Clients:
             try:
-                client.send(f"USERLIST {user_list}".encode('utf-8'))
+                client.send(f"USERLIST {User_List}".encode('utf-8'))
             except:
-                disconnected_clients.append(client)
-        for client in disconnected_clients:
-            nickname = clients.get(client, "Bilinmeyen")
-            clients.pop(client, None)
-            message_times.pop(client, None)
-            persistent_users.discard(nickname)
-            print(f"Kullanıcı listesi güncellenirken bağlantısı kopan istemci kaldırıldı: {nickname}")
+                Dis_Clients.append(client)  # Add disconnected to list.
+        for client in Dis_Clients:
+            Remove(client)
 
-    # İstemciden gelen mesajları işleyen fonksiyon
-    def handle_chat_receive(conn, sender):
+    def ProcessMessage(connection, sender):  # The purpose of this function is to listen to and process clients. Connection for socket. Sender for client info.
         try:
             while True:
-                msg = conn.recv(1024).decode('utf-8')
-                if not msg:
-                    print(f"{sender} adresinden mesaj alınamadı, bağlantı kapatılıyor")
+                message = connection.recv(1024).decode('utf-8')
+                if not message:
+                    print(f"{sender} Connection lost.")
                     break
-                print(f"{sender} adresinden mesaj alındı: {msg}")
-                if msg == "Exit":
-                    nickname = clients[conn]
-                    clients.pop(conn, None)
-                    message_times.pop(conn, None)
-                    persistent_users.discard(nickname)
-                    broadcast(f"{nickname} sohbetten ayrıldı!")
-                    send_user_list()
-                    conn.close()
+                print(f"{sender} Message received: {message}")
+                if message == Exit:  # To exit to chat.
+                    nickname = Remove(connection)
+                    Broadcast(f"{nickname} is left the chat!")
+                    UserList()  # Update User list.
+                    connection.close()
                     break
-                elif msg.startswith("PM"):
-                    _, target, pm_message = msg.split(" ", 2)
-                    for client, nick in clients.items():
-                        if nick == target:
-                            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                            pm_full = f"[{timestamp}] [Özel mesaj - {clients[conn]}] {pm_message}"
-                            try:
-                                client.send(pm_full.encode('utf-8'))
-                            except:
-                                pass
-                            break
-                    else:
-                        conn.send(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] Kullanıcı {target} bulunamadı!".encode('utf-8'))
-                else:
+                elif message.startswith("PM"):  # For private Message
+                    print(f"Processing private message: {message}")
+                    _, target, pm_message = message.split(" ", 2)  # To Split.
+                    with lock:  # Ensure thread-safe access
+                        for client, nick in Clients.items():
+                            if nick == target:  # The person we will send a message.
+                                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # Message to the left.
+                                pm_fmessage = f"[{timestamp}] [Private Message - {Clients[connection]}] {pm_message}"  # And full message.
+                                print(f"Sending private message to {target}: {pm_fmessage}")
+                                # Log private message regardless of send success
+                                with open(Private, "a", encoding='utf-8') as log:
+                                    log.write(f"{pm_fmessage}\n")
+                                try:
+                                    client.send(pm_fmessage.encode('utf-8'))  # Send the message to the target client.
+                                    print(f"Private message sent successfully to {target}")
+                                except Exception as e:
+                                    print(f"Failed to send private message to {target}: {str(e)}")
+                                break
+                        else:
+                            # If the target user was not found
+                            connection.send(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] User {target} not found!".encode('utf-8'))
+                            print(f"Target {target} not found")
+                else:  # Spam Control.
                     current_time = time.time()
-                    message_times.setdefault(conn, []).append(current_time)
-                    message_times[conn] = message_times[conn][-5:]
-                    if len(message_times[conn]) == 5 and (current_time - message_times[conn][0]) < 5:
-                        conn.send("Mesaj sınırı aşıldı! 10 saniye susturuldunuz.".encode('utf-8'))
-                        threading.Event().wait(10)
-                        message_times[conn].clear()
-                    else:
-                        broadcast(f"{clients[conn]}: {msg}")
+                    with lock:
+                        Timestamps.setdefault(connection, []).append(current_time)
+                        Timestamps[connection] = Timestamps[connection][-5:]  # Keeping timestamp of 5 messages
+                        if len(Timestamps[connection]) == 5 and (current_time - Timestamps[connection][0]) < 5:  # 5 messages in less than 5 seconds.
+                            connection.send("You have been muted for 10 seconds because you exceeded your message limit.".encode('utf-8'))  # Muted 
+                            threading.Event().wait(10)
+                            Timestamps[connection].clear()
+                        else:
+                            Broadcast(f"{Clients[connection]}: {message}")
         except Exception as e:
-            print(f"{sender} için mesaj alma hatası: {str(e)}")
-            nickname = clients.get(conn, "Bilinmeyen")
-            clients.pop(conn, None)
-            message_times.pop(conn, None)
-            persistent_users.discard(nickname)
-            broadcast(f"{nickname} bağlantısı koptu!")
-            send_user_list()
-            conn.close()
-
-    # Yeni istemci bağlantılarını kabul eder
+            print(f"{sender} message not received: {str(e)}")
+            nickname = Remove(connection)
+            Broadcast(f"{nickname} is left the chat!")
+            UserList()  # Update User list.
+            connection.close()
+    
     while True:
         try:
-            client_socket, address = server.accept()
-            print(f"{address} ile bağlantı kuruldu")
-            client_socket.send("NICK".encode('utf-8'))
-            nickname = client_socket.recv(1024).decode('utf-8')
-            print(f"Alınan takma ad: {nickname}")
-            while nickname in clients.values() or '*' in nickname:
-                client_socket.send("Bu takma ad alınmış veya geçersiz! Başka bir tane deneyin.".encode('utf-8'))
-                nickname = client_socket.recv(1024).decode('utf-8')
-            clients[client_socket] = nickname
-            persistent_users.add(nickname)
-            broadcast(f"{nickname} sohbete katıldı!")
-            send_user_list()
-            threading.Thread(target=handle_chat_receive, args=(client_socket, address), daemon=True).start()
+            cl_socket,address = Server.accept()  # Socket and address info.
+            print(f"{address} Connected.")
+            cl_socket.send("NICK".encode('utf-8'))  # Sending nickname command.
+            nickname = cl_socket.recv(1024).decode('utf-8')  # New nickname.
+            print(f"Taken Nickname: {nickname}")
+            while nickname in Clients.values() or '*' in nickname:
+                cl_socket.send("This nickname is taken or invalid! Try another one.".encode('utf-8'))
+                nickname = cl_socket.recv(1024).decode('utf-8')  # New nickname
+            with lock:
+                Clients[cl_socket] = nickname  # Add this client to the Clients list.
+                Active_Users.add(nickname)  # Add this client to the User list
+            Broadcast(f"{nickname} Joined the chat!")
+            UserList()  # Update User list.
+            threading.Thread(target=ProcessMessage, args=(cl_socket, address), daemon=True).start()  # Starting new thread for all client.
         except Exception as e:
-            print(f"İstemci kabul hatası: {str(e)}")
+            print(f"Error: {str(e)}")
             break
-    server.close()
+    Server.close()
 
 if __name__ == "__main__":
-    start_server()
+    Server()
