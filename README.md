@@ -60,9 +60,5 @@ Notes
 	Check the terminal for detailed error messages if issues arise.    
 
  When it works :
- 
- ![Ekran görüntüsü 2025-04-01 145039](https://github.com/user-attachments/assets/6999b632-172d-46c0-aadc-32fefc3086de)
- 
 
-
-
+    ![Ekran görüntüsü 2025-04-20 133450](https://github.com/user-attachments/assets/2af710de-2513-4aba-9e80-01bfed6d772d)
