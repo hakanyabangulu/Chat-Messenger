@@ -39,6 +39,7 @@ Download the Files:
 	Server.py: The server script.
 	Client.py: The client script.
  	ChatMessenger.py: Combined script
+  	My-Client.py: Without UI script
 Run the Server:
 
 	Open a terminal and navigate to the directory containing Server.py.
